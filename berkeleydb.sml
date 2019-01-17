@@ -8,8 +8,8 @@ local
 in
   exception BerkeleyDB of int
 
-  type db    = Memory.voidStar
-  type dbTxn = Memory.voidStar
+  datatype db    = DB of Memory.voidStar
+  datatype dbTxn = DB_TXN of Memory.voidStar
 
 
   val db_create_ffi = buildCall3 ((getSymbol lib "db_create"), (cStar cPointer, cOptionPtr cPointer, cUint32), cInt)
@@ -80,6 +80,9 @@ end
 struct
   open BerkeleyDB
 
+  fun dbTxn NONE = NONE
+    | dbTxn (SOME (DB_TXN dbtxn)) = SOME dbtxn
+
   datatype dbType = BTREE | HASH | RECNO | QUEUE | UNKNOWN
 
   fun dbTypeToInt BTREE   = 1
@@ -100,13 +103,13 @@ struct
   fun dbOpen (dbtxn, filename, dbname, dbtype, flags, mode) =
     let
       val db = db_create ()
-      val r = db_open (db, dbtxn, filename, dbname, (dbTypeToInt dbtype), (dbFlagsAnd flags), mode)
+      val r = db_open (db, dbTxn dbtxn, filename, dbname, (dbTypeToInt dbtype), (dbFlagsAnd flags), mode)
     in
-      if r = 0 then db else raise BerkeleyDB r
+      if r = 0 then DB db else raise BerkeleyDB r
     end
 
 
-  fun dbClose (db, flags) =
+  fun dbClose (DB db, flags) =
     let
       val r = db_close (db, (dbFlagsAnd flags))
     in
@@ -114,34 +117,39 @@ struct
     end
 
 
-  fun dbPut (db, dbtxn, key, data, flags) =
+  fun dbPut (DB db, dbtxn, key, data, flags) =
     let
-      val r = db_put (db, dbtxn, key, String.size key, data, String.size data, dbFlagsAnd flags)
+      val r = db_put (db, dbTxn dbtxn, key, String.size key, data, String.size data, dbFlagsAnd flags)
     in
       if r = 0 then () else raise BerkeleyDB r
     end
 
 
-  fun dbGet (db, dbtxn, key, flags) = db_get (db, dbtxn, key, String.size key, dbFlagsAnd flags)
+  fun dbGet (DB db, dbtxn, key, flags) = db_get (db, dbTxn dbtxn, key, String.size key, dbFlagsAnd flags)
 
 
-  fun dbExists (db, dbtxn, key, flags) =
+  fun dbExists (DB db, dbtxn, key, flags) =
     let
-      val r = db_exists (db, dbtxn, key, String.size key, dbFlagsAnd flags)
+      val r = db_exists (db, dbTxn dbtxn, key, String.size key, dbFlagsAnd flags)
     in
       if r = 0 then true else
       if isAbsent r then false else raise BerkeleyDB r
     end
 
 
-  fun dbDel (db, dbtxn, key, flags) =
+  fun dbDel (DB db, dbtxn, key, flags) =
      let
-      val r = db_del (db, dbtxn, key, String.size key, dbFlagsAnd flags)
+      val r = db_del (db, dbTxn dbtxn, key, String.size key, dbFlagsAnd flags)
     in
       if r = 0 then () else
       if isAbsent r then () else raise BerkeleyDB r
     end
 
+
+end
+
+
+open BerkeleyDB
 
 fun test () =
   let
@@ -157,26 +165,26 @@ fun test () =
     val data = "my_data"
 
 
-    val () = dbPut (db, NONE, key, data, [])
-    val r = case dbGet (db, NONE, key, []) of
+    val () = dbPut (db, dbtxn, key, data, [])
+    val r = case dbGet (db, dbtxn, key, []) of
                 NONE   => "ERROR"
               | SOME d => if d = data then "OK" else "ERROR"
     val _ = print ("Put and Get: " ^ r ^ "\n")
 
 
-    val _ = if dbExists (db, NONE, key, [])
+    val _ = if dbExists (db, dbtxn, key, [])
             then print ("Put and Exists: OK\n")
             else print ("Put and Exists: ERROR\n")
 
 
-    val () = dbDel (db, NONE, key, [])
-    val r = case dbGet (db, NONE, key, []) of
+    val () = dbDel (db, dbtxn, key, [])
+    val r = case dbGet (db, dbtxn, key, []) of
                 NONE   => "OK"
               | SOME _ => "ERROR"
     val _ = print ("Del and Get: " ^ r ^ "\n")
 
 
-    val _ = if dbExists (db, NONE, key, [])
+    val _ = if dbExists (db, dbtxn, key, [])
             then print ("Del and Exists: ERROR\n")
             else print ("Del and Exists: OK\n")
   in
@@ -186,5 +194,3 @@ fun test () =
 
 
 val _ = test ()
-
-end
