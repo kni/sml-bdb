@@ -24,7 +24,7 @@ in
    end
 
 
-  val db_open = buildCall7 ((getSymbol lib "db_open"), (cPointer, cOptionPtr cPointer, cString, cOptionPtr cString, cInt, cUint32, cInt), cInt)
+  val db_open = buildCall7 ((getSymbol lib "db_open"), (cPointer, cOptionPtr cPointer, cOptionPtr cString, cOptionPtr cString, cInt, cUint32, cInt), cInt)
 
   val db_close = buildCall2 ((getSymbol lib "db_close"), (cPointer, cUint32), cInt)
 
@@ -40,17 +40,15 @@ in
   fun readMem (mem:Memory.voidStar, len:int) : string = CharVector.tabulate (len, fn i => Byte.byteToChar (Memory.get8 (mem, Word.fromInt i)))
 
   val db_get_ffi = buildCall7 ((getSymbol lib "db_get"), (cPointer, cOptionPtr cPointer, cString, cUint32, cStar cPointer, cStar cUint32, cUint32), cInt)
-  fun db_get (db, db_txn, key, key_len, flags) =
+  fun db_get (db, dbtxn, key, key_len, flags) =
     let
       val data_r = ref Memory.null
       val data_len_r = ref 0
-      val r  = db_get_ffi (db, db_txn, key, key_len, data_r, data_len_r, flags)
+      val r  = db_get_ffi (db, dbtxn, key, key_len, data_r, data_len_r, flags)
     in
      if r = 0
      then SOME (readMem (!data_r, !data_len_r))
-     else if isAbsent r
-     then NONE
-     else raise BerkeleyDB r
+     else if isAbsent r then NONE else raise BerkeleyDB r
     end
 
 
@@ -71,7 +69,7 @@ sig
   datatype dbFlag = DB_CREATE | DB_RECOVER
   type db
   type dbTxn
-  val dbOpen   : dbTxn option * string * string option * dbType * dbFlag list * int -> db
+  val dbOpen   : dbTxn option * string option * string option * dbType * dbFlag list * int -> db
   val dbClose  : db * dbFlag list -> unit
   val dbPut    : db * dbTxn option * string * string * dbFlag list -> unit
   val dbGet    : db * dbTxn option * string * dbFlag list -> string option
@@ -96,17 +94,15 @@ struct
   fun dbFlagToWord DB_CREATE  = 0wx1
     | dbFlagToWord DB_RECOVER = 0wx2
 
-  fun dbFlagsAnd flags = Word.toInt (List.foldl (fn (v,a) => Word.andb (dbFlagToWord v, a)) 0w0 flags)
+  fun dbFlagsAnd flags = Word.toInt (List.foldl (fn (v,a) => Word.orb (dbFlagToWord v, a)) 0w0 flags)
 
 
-  fun dbOpen (db_txn, filename, dbname, db_type, flags, mode) =
+  fun dbOpen (dbtxn, filename, dbname, dbtype, flags, mode) =
     let
       val db = db_create ()
-      val r = db_open (db, db_txn, filename, dbname, (dbTypeToInt db_type), (dbFlagsAnd flags), mode)
+      val r = db_open (db, dbtxn, filename, dbname, (dbTypeToInt dbtype), (dbFlagsAnd flags), mode)
     in
-      if r = 0
-      then db
-      else raise BerkeleyDB r
+      if r = 0 then db else raise BerkeleyDB r
     end
 
 
@@ -114,52 +110,48 @@ struct
     let
       val r = db_close (db, (dbFlagsAnd flags))
     in
-      if r = 0
-      then ()
-      else raise BerkeleyDB r
+      if r = 0 then () else raise BerkeleyDB r
     end
 
 
-  fun dbPut (db, db_txn, key, data, flags) =
+  fun dbPut (db, dbtxn, key, data, flags) =
     let
-      val r = db_put (db, db_txn, key, String.size key, data, String.size data, dbFlagsAnd flags)
+      val r = db_put (db, dbtxn, key, String.size key, data, String.size data, dbFlagsAnd flags)
     in
-      if r = 0
-      then ()
-      else raise BerkeleyDB r
+      if r = 0 then () else raise BerkeleyDB r
     end
 
 
-  fun dbGet (db, db_txn, key, flags) = db_get (db, db_txn, key, String.size key, dbFlagsAnd flags)
+  fun dbGet (db, dbtxn, key, flags) = db_get (db, dbtxn, key, String.size key, dbFlagsAnd flags)
 
 
-  fun dbExists (db, db_txn, key, flags) =
+  fun dbExists (db, dbtxn, key, flags) =
     let
-      val r = db_exists (db, db_txn, key, String.size key, dbFlagsAnd flags)
+      val r = db_exists (db, dbtxn, key, String.size key, dbFlagsAnd flags)
     in
-      if r = 0
-      then true
-      else if isAbsent r
-      then false
-      else raise BerkeleyDB r
+      if r = 0 then true else
+      if isAbsent r then false else raise BerkeleyDB r
     end
 
 
-  fun dbDel (db, db_txn, key, flags) =
+  fun dbDel (db, dbtxn, key, flags) =
      let
-      val r = db_del (db, db_txn, key, String.size key, dbFlagsAnd flags)
+      val r = db_del (db, dbtxn, key, String.size key, dbFlagsAnd flags)
     in
-      if r = 0
-      then ()
-      else if isAbsent r
-      then ()
-      else raise BerkeleyDB r
+      if r = 0 then () else
+      if isAbsent r then () else raise BerkeleyDB r
     end
 
 
 fun test () =
   let
-    val db = dbOpen (NONE, "/tmp/foo.db", NONE, HASH, [DB_CREATE], 0)
+    val dbtxn    = NONE
+    val filename = NONE (* SOME "/tmp/foo.db" *)
+    val dbname   = NONE
+    val dbtype   = HASH
+    val flags    = [DB_CREATE]
+    val mode     = 0
+    val db = dbOpen (dbtxn, filename, dbname, dbtype, flags, mode)
 
     val key  = "my_key"
     val data = "my_data"
