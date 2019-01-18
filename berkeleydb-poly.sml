@@ -39,11 +39,11 @@ in
   fun readMem (mem:Memory.voidStar, len:int) : string = CharVector.tabulate (len, fn i => Byte.byteToChar (Memory.get8 (mem, Word.fromInt i)))
 
   val db_get_ffi = buildCall7 ((getSymbol lib "db_get"), (cPointer, cOptionPtr cPointer, cString, cUint32, cStar cPointer, cStar cUint32, cUint32), cInt)
-  fun db_get (db, dbtxn, key, key_len, flags) =
+  fun db_get (db, txnid, key, key_len, flags) =
     let
       val data_r = ref Memory.null
       val data_len_r = ref 0
-      val r  = db_get_ffi (db, dbtxn, key, key_len, data_r, data_len_r, flags)
+      val r  = db_get_ffi (db, txnid, key, key_len, data_r, data_len_r, flags)
     in
      if r = 0
      then SOME (readMem (!data_r, !data_len_r))

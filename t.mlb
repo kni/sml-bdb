@@ -1,0 +1,9 @@
+local
+    $(SML_LIB)/basis/mlton.mlb
+    $(SML_LIB)/basis/basis.mlb
+in
+    berkeleydb-mlton.sml
+	berkeleydb.sml
+	t.sml
+	main.sml
+end
