@@ -19,12 +19,10 @@ int db_put(DB *db, DB_TXN *txnid, const char* key, u_int32_t key_len, const char
 	DBT dbt_key, dbt_data;
 
 	memset(&dbt_key, 0, sizeof(dbt_key));
-	dbt_key.flags = DB_DBT_USERMEM;
 	dbt_key.data = (void*) key;
 	dbt_key.size = key_len;
 
 	memset(&dbt_data, 0, sizeof(dbt_data));
-	dbt_data.flags = DB_DBT_USERMEM;
 	dbt_data.data = (void*) data;
 	dbt_data.size = data_len;
 
@@ -36,7 +34,6 @@ int db_get(DB *db, DB_TXN *txnid, const char* key, u_int32_t key_len, char** dat
 	DBT dbt_key, dbt_data;
 
 	memset(&dbt_key, 0, sizeof(dbt_key));
-	dbt_key.flags = DB_DBT_USERMEM;
 	dbt_key.data = (void*) key;
 	dbt_key.size = key_len;
 
@@ -60,7 +57,6 @@ int db_exists(DB *db, DB_TXN *txnid, const char* key, u_int32_t key_len, u_int32
 	DBT dbt_key;
 
 	memset(&dbt_key, 0, sizeof(dbt_key));
-	dbt_key.flags = DB_DBT_USERMEM;
 	dbt_key.data = (void*) key;
 	dbt_key.size = key_len;
 
@@ -72,7 +68,6 @@ int db_del(DB *db, DB_TXN *txnid, const char* key, u_int32_t key_len, u_int32_t 
 	DBT dbt_key;
 
 	memset(&dbt_key, 0, sizeof(dbt_key));
-	dbt_key.flags = DB_DBT_USERMEM;
 	dbt_key.data = (void*) key;
 	dbt_key.size = key_len;
 
