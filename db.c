@@ -38,7 +38,6 @@ int db_get(DB *db, DB_TXN *txnid, const char* key, u_int32_t key_len, char** dat
 	dbt_key.size = key_len;
 
 	memset(&dbt_data, 0, sizeof(dbt_data));
-	dbt_data.flags = DB_DBT_MALLOC;
 
 	int ret = db->get(db, txnid, &dbt_key, &dbt_data, flags);
 
