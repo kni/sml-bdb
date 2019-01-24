@@ -37,13 +37,13 @@ in
     end
 
   val db_open_ffi = _import "db_open": t * t * t * t * int * Word32.word * int-> int;
-  fun db_open (db, dbtxn, filename, dbname, dbtype, flags, mode) =
+  fun db_open (db, txnid, filename, dbname, dbtype, flags, mode) =
     let
-      val dbtxn = case dbtxn    of NONE => null | SOME p => p
+      val txnid = case txnid of NONE => null | SOME p => p
       val filename_p = stringOptionToPtr filename
       val dbname_p   = stringOptionToPtr dbname
       (* ToDo https://github.com/MLton/mlton/issues/53 *)
-      val r = db_open_ffi (db, dbtxn, filename_p, dbname_p, dbtype, Word32.fromInt flags, mode)
+      val r = db_open_ffi (db, txnid, filename_p, dbname_p, dbtype, Word32.fromInt flags, mode)
     in
       freeNotNull filename_p;
       freeNotNull dbname_p;
@@ -61,6 +61,17 @@ in
       val txnid = case txnid of NONE => null | SOME p => p
     in
       db_put_ffi (db, txnid, key, Word32.fromInt key_len, data, Word32.fromInt data_len, Word32.fromInt flags)
+    end
+
+  val db_put_recno_ffi = _import "db_put_recno": t * t * Word32.word ref * string * Word32.word * Word32.word-> int;
+
+  fun db_put_recno (db, txnid, key, data, data_len, flags) =
+    let
+      val txnid = case txnid of NONE => null | SOME p => p
+      val key' = ref (Word32.fromInt key)
+      val r = db_put_recno_ffi (db, txnid, key', data, Word32.fromInt data_len, Word32.fromInt flags)
+    in
+      if r = 0 then Word32.toInt (!key') else raise BerkeleyDB r
     end
 
 
@@ -85,6 +96,18 @@ in
       else if isAbsent r then NONE else raise BerkeleyDB r
     end
 
+  val db_get_recno_ffi = _import "db_get_recno": t * t * Word32.word * t ref * Word32.word ref * Word32.word-> int;
+  fun db_get_recno (db, txnid, key, flags) =
+    let
+      val txnid = case txnid of NONE => null | SOME p => p
+      val data_r = ref null
+      val data_len_r = ref 0w0
+      val r  = db_get_recno_ffi (db, txnid, Word32.fromInt key, data_r, data_len_r, Word32.fromInt flags)
+    in
+      if r = 0
+      then SOME (readMem (!data_r, !data_len_r))
+      else if isAbsent r then NONE else raise BerkeleyDB r
+    end
 
   val db_exists_ffi = _import "db_exists": t * t * string * Word32.word * Word32.word-> int;
   fun db_exists (db, txnid, key, key_len, flags) =
