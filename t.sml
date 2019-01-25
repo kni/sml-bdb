@@ -2,17 +2,20 @@ open BerkeleyDB
 
 fun test_hash () =
   let
+    val _ = print "Hash or BTree.\n"
+
     open Hash
     val dbtxn    = NONE
     val filename = NONE (* SOME "/tmp/foo.db" *)
     val dbname   = NONE
     val flags    = [DB_CREATE]
     val mode     = 0
-    val db = dbOpen (dbtxn, filename, dbname, flags, mode)
+
+    val db = dbCreate ()
+    val _ = dbOpen (db, dbtxn, filename, dbname, flags, mode)
 
     val key  = "my_key"
     val data = "my_data"
-
 
     val () = dbPut (db, dbtxn, key, data, [])
     val r = case dbGet (db, dbtxn, key, []) of
@@ -43,15 +46,19 @@ fun test_hash () =
 
 fun test_recno () =
   let
+    val _ = print "Recno or Queue.\n"
+
     open Recno
     val dbtxn    = NONE
     val filename = NONE (* SOME "/tmp/foo.db" *)
     val dbname   = NONE
     val flags    = [DB_CREATE]
     val mode     = 0
-    val db = dbOpen (dbtxn, filename, dbname, flags, mode)
 
-    val _ = print "Recno\n"
+    val db = dbCreate ()
+    val _ = dbSetReLen (db, 6)
+
+    val _ = dbOpen (db, dbtxn, filename, dbname, flags, mode)
 
     fun put key data = dbPut (db, dbtxn, key, data, [])
     val _ = put 1 "orange"
@@ -67,7 +74,7 @@ fun test_recno () =
 
     val r = case dbGet (db, dbtxn, key, []) of
                 NONE   => "ERROR"
-              | SOME d => if d = "yellow" then "OK" else "ERROR"
+              | SOME d => if d = "yellow" then "OK" else ("ERROR (" ^ d ^ ")")
     val _ = print ("Put and Get: " ^ r ^ "\n")
 
     val () = dbDel (db, dbtxn, key, [])
@@ -83,4 +90,9 @@ fun test_recno () =
     dbClose (db, [])
   end
 
-fun main () = (test_hash () ; test_recno () ; print "The End\n" ) handle exc => print ("function main raised an exception: " ^ exnMessage exc ^ "\n")
+
+fun main () = (
+    test_hash ();
+    test_recno ();
+    print "The End.\n"
+  ) handle exc => print ("function main raised an exception: " ^ exnMessage exc ^ "\n")

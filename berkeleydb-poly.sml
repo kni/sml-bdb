@@ -22,13 +22,21 @@ in
    end
 
 
-  val db_open_ffi = buildCall7 ((getSymbol lib "db_open"), (cPointer, cOptionPtr cPointer, cOptionPtr cString, cOptionPtr cString, cInt, cUint32, cInt), cInt)
-  fun db_open (txnid, filename, dbname, dbtype, flags, mode) =
+  val db_set_re_len_ffi = buildCall2 ((getSymbol lib "db_set_re_len"), (cPointer, cUint32), cInt)
+  fun db_set_re_len (db, re_len) =
     let
-      val db = db_create ()
+      val r = db_set_re_len_ffi (db, re_len)
+    in
+      if r = 0 then () else raise BerkeleyDB r
+    end
+
+
+  val db_open_ffi = buildCall7 ((getSymbol lib "db_open"), (cPointer, cOptionPtr cPointer, cOptionPtr cString, cOptionPtr cString, cInt, cUint32, cInt), cInt)
+  fun db_open (db, txnid, filename, dbname, dbtype, flags, mode) =
+    let
       val r = db_open_ffi (db, txnid, filename, dbname, dbtype, flags, mode)
     in
-      if r = 0 then db else raise BerkeleyDB r
+      if r = 0 then () else raise BerkeleyDB r
     end
 
 

@@ -21,6 +21,15 @@ in
    end
 
 
+  val db_set_re_len_ffi = _import "db_set_re_len": t * Word32.word -> int;
+  fun db_set_re_len (db, re_len) =
+    let
+      val r = db_set_re_len_ffi (db, Word32.fromInt re_len)
+    in
+      if r = 0 then () else raise BerkeleyDB r
+    end
+
+
   val malloc = (_import "malloc" : Word.word -> t;) o Word.fromInt
 
   val free = _import "free" : t -> unit;
@@ -40,9 +49,8 @@ in
 
 
   val db_open_ffi = _import "db_open": t * t * t * t * int * Word32.word * int-> int;
-  fun db_open (txnid, filename, dbname, dbtype, flags, mode) =
+  fun db_open (db, txnid, filename, dbname, dbtype, flags, mode) =
     let
-      val db = db_create ()
       val filename_p = stringOptionToPtr filename
       val dbname_p   = stringOptionToPtr dbname
       (* ToDo https://github.com/MLton/mlton/issues/53 *)
@@ -50,7 +58,7 @@ in
     in
       freeNotNull filename_p;
       freeNotNull dbname_p;
-      if r = 0 then db else raise BerkeleyDB r
+      if r = 0 then () else raise BerkeleyDB r
     end
 
 

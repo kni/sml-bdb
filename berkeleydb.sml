@@ -7,7 +7,9 @@ sig
   structure BTree :
   sig
     type db
-    val dbOpen   : dbTxn option * string option * string option * dbFlag list * int -> db
+    val dbCreate : unit -> db
+
+    val dbOpen   : db * dbTxn option * string option * string option * dbFlag list * int -> unit
     val dbClose  : db * dbFlag list -> unit
 
     val dbPut    : db * dbTxn option * string * string * dbFlag list -> unit
@@ -19,7 +21,9 @@ sig
   structure Hash :
   sig
     type db
-    val dbOpen   : dbTxn option * string option * string option * dbFlag list * int -> db
+    val dbCreate : unit -> db
+
+    val dbOpen   : db * dbTxn option * string option * string option * dbFlag list * int -> unit
     val dbClose  : db * dbFlag list -> unit
 
     val dbPut    : db * dbTxn option * string * string * dbFlag list -> unit
@@ -31,7 +35,10 @@ sig
   structure Recno :
   sig
     type db
-    val dbOpen   : dbTxn option * string option * string option * dbFlag list * int -> db
+    val dbCreate : unit -> db
+    val dbSetReLen : db * int -> unit
+
+    val dbOpen   : db * dbTxn option * string option * string option * dbFlag list * int -> unit
     val dbClose  : db * dbFlag list -> unit
 
     val dbPut    : db * dbTxn option * int * string * dbFlag list -> int
@@ -43,7 +50,10 @@ sig
   structure Queue :
   sig
     type db
-    val dbOpen   : dbTxn option * string option * string option * dbFlag list * int -> db
+    val dbCreate : unit -> db
+    val dbSetReLen : db * int -> unit
+
+    val dbOpen   : db * dbTxn option * string option * string option * dbFlag list * int -> unit
     val dbClose  : db * dbFlag list -> unit
 
     val dbPut    : db * dbTxn option * int * string * dbFlag list -> int
@@ -82,8 +92,10 @@ struct
   struct
     open BTree
 
-    fun dbOpen (dbtxn, filename, dbname, flags, mode) =
-      BTree (db_open (dbTxn dbtxn, filename, dbname, (dbTypeToInt BTREE), (dbFlagsAnd flags), mode))
+    fun dbCreate () = BTree (db_create ())
+
+    fun dbOpen (BTree db, dbtxn, filename, dbname, flags, mode) =
+      db_open (db, dbTxn dbtxn, filename, dbname, (dbTypeToInt BTREE), (dbFlagsAnd flags), mode)
 
     fun dbClose  (BTree db, flags)                   = db_close  (db, dbFlagsAnd flags)
     fun dbPut    (BTree db, dbtxn, key, data, flags) = db_put    (db, dbTxn dbtxn, key, data, dbFlagsAnd flags)
@@ -97,8 +109,10 @@ struct
   struct
     open Hash
 
-    fun dbOpen (dbtxn, filename, dbname, flags, mode) =
-      Hash (db_open (dbTxn dbtxn, filename, dbname, (dbTypeToInt HASH), (dbFlagsAnd flags), mode))
+    fun dbCreate () = Hash (db_create ())
+
+    fun dbOpen (Hash db, dbtxn, filename, dbname, flags, mode) =
+      db_open (db, dbTxn dbtxn, filename, dbname, (dbTypeToInt HASH), (dbFlagsAnd flags), mode)
 
     fun dbClose  (Hash db, flags)                   = db_close  (db, dbFlagsAnd flags)
     fun dbPut    (Hash db, dbtxn, key, data, flags) = db_put    (db, dbTxn dbtxn, key, data, dbFlagsAnd flags)
@@ -112,8 +126,12 @@ struct
   struct
     open Recno
 
-    fun dbOpen (dbtxn, filename, dbname, flags, mode) =
-      Recno (db_open (dbTxn dbtxn, filename, dbname, (dbTypeToInt RECNO), (dbFlagsAnd flags), mode))
+    fun dbCreate () = Recno (db_create ())
+
+    fun dbOpen (Recno db, dbtxn, filename, dbname, flags, mode) =
+      db_open (db, dbTxn dbtxn, filename, dbname, (dbTypeToInt RECNO), (dbFlagsAnd flags), mode)
+
+    fun dbSetReLen (Recno db, len) = db_set_re_len (db, len)
 
     fun dbClose  (Recno db, flags)                   = db_close        (db, dbFlagsAnd flags)
     fun dbPut    (Recno db, dbtxn, key, data, flags) = db_put_recno    (db, dbTxn dbtxn, key, data, dbFlagsAnd flags)
@@ -127,8 +145,12 @@ struct
   struct
     open Queue
 
-    fun dbOpen (dbtxn, filename, dbname, flags, mode) =
-      Queue (db_open (dbTxn dbtxn, filename, dbname, (dbTypeToInt QUEUE), (dbFlagsAnd flags), mode))
+    fun dbCreate () = Queue (db_create ())
+
+    fun dbOpen (Queue db, dbtxn, filename, dbname, flags, mode) =
+      db_open (db, dbTxn dbtxn, filename, dbname, (dbTypeToInt QUEUE), (dbFlagsAnd flags), mode)
+
+    fun dbSetReLen (Queue db, len) = db_set_re_len (db, len)
 
     fun dbClose  (Queue db, flags)                   = db_close        (db, dbFlagsAnd flags)
     fun dbPut    (Queue db, dbtxn, key, data, flags) = db_put_recno    (db, dbTxn dbtxn, key, data, dbFlagsAnd flags)

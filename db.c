@@ -5,8 +5,13 @@
 // int db_create(DB **dbp, DB_ENV *dbenv, u_int32_t flags);
 
 
-int db_open(DB *dbp, DB_TXN *txnid, char *filename, char *dbname, DBTYPE type, u_int32_t flags, int mode) {
-	return dbp->open(dbp, txnid, filename, dbname, type, flags, mode);
+int db_set_re_len(DB *db, u_int32_t re_len) {
+	return db->set_re_len(db, re_len);
+}
+
+
+int db_open(DB *db, DB_TXN *txnid, char *filename, char *dbname, DBTYPE type, u_int32_t flags, int mode) {
+	return db->open(db, txnid, filename, dbname, type, flags, mode);
 }
 
 
