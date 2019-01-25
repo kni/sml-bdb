@@ -4,6 +4,18 @@ sig
   type dbTxn
   datatype dbFlag = DB_CREATE | DB_RECOVER | DB_APPEND
 
+  structure BTree :
+  sig
+    type db
+    val dbOpen   : dbTxn option * string option * string option * dbFlag list * int -> db
+    val dbClose  : db * dbFlag list -> unit
+
+    val dbPut    : db * dbTxn option * string * string * dbFlag list -> unit
+    val dbGet    : db * dbTxn option * string * dbFlag list -> string option
+    val dbExists : db * dbTxn option * string * dbFlag list -> bool
+    val dbDel    : db * dbTxn option * string * dbFlag list -> unit
+  end
+
   structure Hash :
   sig
     type db
@@ -28,6 +40,18 @@ sig
     val dbDel    : db * dbTxn option * int * dbFlag list -> unit
   end
 
+  structure Queue :
+  sig
+    type db
+    val dbOpen   : dbTxn option * string option * string option * dbFlag list * int -> db
+    val dbClose  : db * dbFlag list -> unit
+
+    val dbPut    : db * dbTxn option * int * string * dbFlag list -> int
+    val dbGet    : db * dbTxn option * int * dbFlag list -> string option
+    val dbExists : db * dbTxn option * int * dbFlag list -> bool
+    val dbDel    : db * dbTxn option * int * dbFlag list -> unit
+  end
+
 end
 =
 struct
@@ -38,10 +62,10 @@ struct
 
   datatype dbType = BTREE | HASH | RECNO | QUEUE
 
-  fun dbTypeToInt BTREE   = 1
-    | dbTypeToInt HASH    = 2
-    | dbTypeToInt RECNO   = 3
-    | dbTypeToInt QUEUE   = 4
+  fun dbTypeToInt BTREE = 1
+    | dbTypeToInt HASH  = 2
+    | dbTypeToInt RECNO = 3
+    | dbTypeToInt QUEUE = 4
 
 
   datatype dbFlag = DB_CREATE | DB_RECOVER | DB_APPEND
@@ -53,98 +77,64 @@ struct
   fun dbFlagsAnd flags = Word.toInt (List.foldl (fn (v,a) => Word.orb (dbFlagToWord v, a)) 0w0 flags)
 
 
-  fun dbOpen' (dbtxn, filename, dbname, dbtype, flags, mode) =
-    let
-      val db = db_create ()
-      val r = db_open (db, dbTxn dbtxn, filename, dbname, (dbTypeToInt dbtype), (dbFlagsAnd flags), mode)
-    in
-      if r = 0 then db else raise BerkeleyDB r
-    end
 
+  structure BTree =
+  struct
+    open BTree
 
-  fun dbClose' (db, flags) =
-    let
-      val r = db_close (db, (dbFlagsAnd flags))
-    in
-      if r = 0 then () else raise BerkeleyDB r
-    end
+    fun dbOpen (dbtxn, filename, dbname, flags, mode) =
+      BTree (db_open (dbTxn dbtxn, filename, dbname, (dbTypeToInt BTREE), (dbFlagsAnd flags), mode))
 
-
-  fun dbPut' (db, dbtxn, key, data, flags) =
-    let
-      val r = db_put (db, dbTxn dbtxn, key, String.size key, data, String.size data, dbFlagsAnd flags)
-    in
-      if r = 0 then () else raise BerkeleyDB r
-    end
-
-
-  fun dbPutRecno' (db, dbtxn, key, data, flags) = db_put_recno (db, dbTxn dbtxn, key, data, String.size data, dbFlagsAnd flags)
-
-
-  fun dbGet' (db, dbtxn, key, flags) = db_get (db, dbTxn dbtxn, key, String.size key, dbFlagsAnd flags)
-
-
-  fun dbGetRecno' (db, dbtxn, key, flags) = db_get_recno (db, dbTxn dbtxn, key, dbFlagsAnd flags)
-
-
-  fun dbExists' (db, dbtxn, key, flags) =
-    let
-      val r = db_exists (db, dbTxn dbtxn, key, String.size key, dbFlagsAnd flags)
-    in
-      if r = 0 then true else
-      if isAbsent r then false else raise BerkeleyDB r
-    end
-
-
-  fun dbExistsRecno' (db, dbtxn, key, flags) =
-    let
-      val r = db_exists_recno (db, dbTxn dbtxn, key, dbFlagsAnd flags)
-    in
-      if r = 0 then true else
-      if isAbsent r then false else raise BerkeleyDB r
-    end
-
-
-  fun dbDel' (db, dbtxn, key, flags) =
-     let
-      val r = db_del (db, dbTxn dbtxn, key, String.size key, dbFlagsAnd flags)
-    in
-      if r = 0 then () else
-      if isAbsent r then () else raise BerkeleyDB r
-    end
-
-
-  fun dbDelRecno' (db, dbtxn, key, flags) =
-     let
-      val r = db_del_recno (db, dbTxn dbtxn, key, dbFlagsAnd flags)
-    in
-      if r = 0 then () else
-      if isAbsent r then () else raise BerkeleyDB r
-    end
+    fun dbClose  (BTree db, flags)                   = db_close  (db, dbFlagsAnd flags)
+    fun dbPut    (BTree db, dbtxn, key, data, flags) = db_put    (db, dbTxn dbtxn, key, data, dbFlagsAnd flags)
+    fun dbGet    (BTree db, dbtxn, key, flags)       = db_get    (db, dbTxn dbtxn, key, dbFlagsAnd flags)
+    fun dbExists (BTree db, dbtxn, key, flags)       = db_exists (db, dbTxn dbtxn, key, dbFlagsAnd flags)
+    fun dbDel    (BTree db, dbtxn, key, flags)       = db_del    (db, dbTxn dbtxn, key, dbFlagsAnd flags)
+  end
 
 
   structure Hash =
   struct
     open Hash
 
-    fun dbOpen   (dbtxn, filename, dbname, flags, mode) = Hash (dbOpen' (dbtxn, filename, dbname, HASH, flags, mode))
-    fun dbClose  (Hash db, flags)                   = dbClose' (db, flags)
-    fun dbPut    (Hash db, dbtxn, key, data, flags) = dbPut' (db, dbtxn, key, data, flags)
-    fun dbGet    (Hash db, dbtxn, key, flags)       = dbGet' (db, dbtxn, key, flags)
-    fun dbExists (Hash db, dbtxn, key, flags)       = dbExists' (db, dbtxn, key, flags)
-    fun dbDel    (Hash db, dbtxn, key, flags)       = dbDel' (db, dbtxn, key, flags)
+    fun dbOpen (dbtxn, filename, dbname, flags, mode) =
+      Hash (db_open (dbTxn dbtxn, filename, dbname, (dbTypeToInt HASH), (dbFlagsAnd flags), mode))
+
+    fun dbClose  (Hash db, flags)                   = db_close  (db, dbFlagsAnd flags)
+    fun dbPut    (Hash db, dbtxn, key, data, flags) = db_put    (db, dbTxn dbtxn, key, data, dbFlagsAnd flags)
+    fun dbGet    (Hash db, dbtxn, key, flags)       = db_get    (db, dbTxn dbtxn, key, dbFlagsAnd flags)
+    fun dbExists (Hash db, dbtxn, key, flags)       = db_exists (db, dbTxn dbtxn, key, dbFlagsAnd flags)
+    fun dbDel    (Hash db, dbtxn, key, flags)       = db_del    (db, dbTxn dbtxn, key, dbFlagsAnd flags)
   end
+
 
   structure Recno =
   struct
     open Recno
 
-    fun dbOpen   (dbtxn, filename, dbname, flags, mode) = Recno (dbOpen' (dbtxn, filename, dbname, RECNO, flags, mode))
-    fun dbClose  (Recno db, flags)                   = dbClose' (db, flags)
-    fun dbPut    (Recno db, dbtxn, key, data, flags) = dbPutRecno' (db, dbtxn, key, data, flags)
-    fun dbGet    (Recno db, dbtxn, key, flags)       = dbGetRecno' (db, dbtxn, key, flags)
-    fun dbExists (Recno db, dbtxn, key, flags)       = dbExistsRecno' (db, dbtxn, key, flags)
-    fun dbDel    (Recno db, dbtxn, key, flags)       = dbDelRecno' (db, dbtxn, key, flags)
+    fun dbOpen (dbtxn, filename, dbname, flags, mode) =
+      Recno (db_open (dbTxn dbtxn, filename, dbname, (dbTypeToInt RECNO), (dbFlagsAnd flags), mode))
+
+    fun dbClose  (Recno db, flags)                   = db_close        (db, dbFlagsAnd flags)
+    fun dbPut    (Recno db, dbtxn, key, data, flags) = db_put_recno    (db, dbTxn dbtxn, key, data, dbFlagsAnd flags)
+    fun dbGet    (Recno db, dbtxn, key, flags)       = db_get_recno    (db, dbTxn dbtxn, key, dbFlagsAnd flags)
+    fun dbExists (Recno db, dbtxn, key, flags)       = db_exists_recno (db, dbTxn dbtxn, key, dbFlagsAnd flags)
+    fun dbDel    (Recno db, dbtxn, key, flags)       = db_del_recno    (db, dbTxn dbtxn, key, dbFlagsAnd flags)
+  end
+
+
+  structure Queue =
+  struct
+    open Queue
+
+    fun dbOpen (dbtxn, filename, dbname, flags, mode) =
+      Queue (db_open (dbTxn dbtxn, filename, dbname, (dbTypeToInt QUEUE), (dbFlagsAnd flags), mode))
+
+    fun dbClose  (Queue db, flags)                   = db_close        (db, dbFlagsAnd flags)
+    fun dbPut    (Queue db, dbtxn, key, data, flags) = db_put_recno    (db, dbTxn dbtxn, key, data, dbFlagsAnd flags)
+    fun dbGet    (Queue db, dbtxn, key, flags)       = db_get_recno    (db, dbTxn dbtxn, key, dbFlagsAnd flags)
+    fun dbExists (Queue db, dbtxn, key, flags)       = db_exists_recno (db, dbTxn dbtxn, key, dbFlagsAnd flags)
+    fun dbDel    (Queue db, dbtxn, key, flags)       = db_del_recno    (db, dbTxn dbtxn, key, dbFlagsAnd flags)
   end
 
 end
