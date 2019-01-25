@@ -60,13 +60,25 @@ fun test_recno () =
     val _ = put 9 "brown"
 
     val key = dbPutRecno (db, dbtxn, 0, "black", [DB_APPEND])
+    val _ = if key = 0 then print ("Put with DB_APPEND: ERROR\n") else print ("Put with DB_APPEND: OK\n")
     val _ = print ("DB_APPEND: " ^ Int.toString key ^ "\n")
 
-    val r = case dbGetRecno (db, dbtxn, 3, []) of
+    val key  = 3
+
+    val r = case dbGetRecno (db, dbtxn, key, []) of
                 NONE   => "ERROR"
               | SOME d => if d = "yellow" then "OK" else "ERROR"
     val _ = print ("Put and Get: " ^ r ^ "\n")
 
+    val () = dbDelRecno (db, dbtxn, key, [])
+    val r = case dbGetRecno (db, dbtxn, key, []) of
+                NONE   => "OK"
+              | SOME _ => "ERROR"
+    val _ = print ("Del and Get: " ^ r ^ "\n")
+
+    val _ = if dbExistsRecno (db, dbtxn, key, [])
+            then print ("Del and Exists: ERROR\n")
+            else print ("Del and Exists: OK\n")
   in
     dbClose (db, [])
   end

@@ -40,7 +40,7 @@ in
 
 
   fun isAbsent r =
-    if r = ~30988 orelse r = ~30996 (* DB_NOTFOUND and DB_KEYEMPTY *)
+    if r = ~30988 orelse r = ~30994 orelse r = ~30995 (* DB_NOTFOUND, DB_KEYEXIST, DB_KEYEMPTY *)
     then true
     else false
 
@@ -73,7 +73,11 @@ in
 
   val db_exists = buildCall5 ((getSymbol lib "db_exists"), (cPointer, cOptionPtr cPointer, cString, cUint32, cUint32), cInt)
 
+  val db_exists_recno = buildCall4 ((getSymbol lib "db_exists_recno"), (cPointer, cOptionPtr cPointer, cUint32, cUint32), cInt)
+
   val db_del = buildCall5 ((getSymbol lib "db_del"), (cPointer, cOptionPtr cPointer, cString, cUint32, cUint32), cInt)
+
+  val db_del_recno = buildCall4 ((getSymbol lib "db_del_recno"), (cPointer, cOptionPtr cPointer, cUint32, cUint32), cInt)
 end
 
 end

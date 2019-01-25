@@ -106,12 +106,35 @@ int db_exists(DB *db, DB_TXN *txnid, const char *key, u_int32_t key_len, u_int32
 }
 
 
+int db_exists_recno(DB *db, DB_TXN *txnid, db_recno_t key, u_int32_t flags) {
+	DBT dbt_key;
+
+	memset(&dbt_key, 0, sizeof(dbt_key));
+	dbt_key.data = &key;
+	dbt_key.size = sizeof(db_recno_t);
+
+	return db->exists(db, txnid, &dbt_key, flags);
+}
+
+
+
 int db_del(DB *db, DB_TXN *txnid, const char *key, u_int32_t key_len, u_int32_t flags) {
 	DBT dbt_key;
 
 	memset(&dbt_key, 0, sizeof(dbt_key));
 	dbt_key.data = (void *) key;
 	dbt_key.size = key_len;
+
+	return db->del(db, txnid, &dbt_key, flags);
+}
+
+
+int db_del_recno(DB *db, DB_TXN *txnid, db_recno_t key, u_int32_t flags) {
+	DBT dbt_key;
+
+	memset(&dbt_key, 0, sizeof(dbt_key));
+	dbt_key.data = &key;
+	dbt_key.size = sizeof(db_recno_t);
 
 	return db->del(db, txnid, &dbt_key, flags);
 }

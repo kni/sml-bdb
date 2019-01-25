@@ -13,8 +13,11 @@ sig
   val dbExists : db * dbTxn option * string * dbFlag list -> bool
   val dbDel    : db * dbTxn option * string * dbFlag list -> unit
 
-  val dbPutRecno : db * dbTxn option * int * string * dbFlag list -> int
-  val dbGetRecno : db * dbTxn option * int * dbFlag list -> string option
+  val dbPutRecno    : db * dbTxn option * int * string * dbFlag list -> int
+  val dbGetRecno    : db * dbTxn option * int * dbFlag list -> string option
+  val dbExistsRecno : db * dbTxn option * int * dbFlag list -> bool
+  val dbDelRecno    : db * dbTxn option * int * dbFlag list -> unit
+
 end
 =
 struct
@@ -84,6 +87,15 @@ struct
     end
 
 
+  fun dbExistsRecno (DB db, dbtxn, key, flags) =
+    let
+      val r = db_exists_recno (db, dbTxn dbtxn, key, dbFlagsAnd flags)
+    in
+      if r = 0 then true else
+      if isAbsent r then false else raise BerkeleyDB r
+    end
+
+
   fun dbDel (DB db, dbtxn, key, flags) =
      let
       val r = db_del (db, dbTxn dbtxn, key, String.size key, dbFlagsAnd flags)
@@ -92,5 +104,13 @@ struct
       if isAbsent r then () else raise BerkeleyDB r
     end
 
+
+  fun dbDelRecno (DB db, dbtxn, key, flags) =
+     let
+      val r = db_del_recno (db, dbTxn dbtxn, key, dbFlagsAnd flags)
+    in
+      if r = 0 then () else
+      if isAbsent r then () else raise BerkeleyDB r
+    end
 
 end

@@ -73,7 +73,7 @@ in
 
 
   fun isAbsent r =
-    if r = ~30988 orelse r = ~30996 (* DB_NOTFOUND and DB_KEYEMPTY *)
+    if r = ~30988 orelse r = ~30994 orelse r = ~30995 (* DB_NOTFOUND, DB_KEYEXIST, DB_KEYEMPTY *)
     then true
     else false
 
@@ -112,9 +112,20 @@ in
       db_exists_ffi (db, pOrNull txnid, key, Word32.fromInt key_len, Word32.fromInt flags)
 
 
+  val db_exists_recno_ffi = _import "db_exists_recno": t * t * Word32.word * Word32.word-> int;
+  fun db_exists_recno (db, txnid, key, flags) =
+      db_exists_recno_ffi (db, pOrNull txnid, Word32.fromInt key, Word32.fromInt flags)
+
+
   val db_del_ffi = _import "db_del": t * t * string * Word32.word * Word32.word-> int;
   fun db_del (db, txnid, key, key_len, flags) =
       db_del_ffi (db, pOrNull txnid, key, Word32.fromInt key_len, Word32.fromInt flags)
+
+
+  val db_del_recno_ffi = _import "db_del_recno": t * t * Word32.word * Word32.word-> int;
+  fun db_del_recno (db, txnid, key, flags) =
+      db_del_recno_ffi (db, pOrNull txnid, Word32.fromInt key, Word32.fromInt flags)
+
 end
 
 end
