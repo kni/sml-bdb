@@ -78,6 +78,17 @@ in
   val db_del = buildCall5 ((getSymbol lib "db_del"), (cPointer, cOptionPtr cPointer, cString, cUint32, cUint32), cInt)
 
   val db_del_recno = buildCall4 ((getSymbol lib "db_del_recno"), (cPointer, cOptionPtr cPointer, cUint32, cUint32), cInt)
+
+
+  structure Hash =
+  struct
+    datatype db = Hash of Memory.voidStar
+  end
+
+  structure Recno =
+  struct
+    datatype db = Recno of Memory.voidStar
+  end
 end
 
 end

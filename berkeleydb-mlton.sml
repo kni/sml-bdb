@@ -126,6 +126,16 @@ in
   fun db_del_recno (db, txnid, key, flags) =
       db_del_recno_ffi (db, pOrNull txnid, Word32.fromInt key, Word32.fromInt flags)
 
+
+  structure Hash =
+  struct
+    datatype db = Hash of t
+  end
+
+  structure Recno =
+  struct
+    datatype db = Recno of t
+  end
 end
 
 end
