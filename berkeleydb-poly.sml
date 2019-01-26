@@ -11,13 +11,13 @@ in
 
 
   val db_create_ffi = buildCall3 ((getSymbol lib "db_create"), (cStar cPointer, cOptionPtr cPointer, cUint32), cInt)
-  fun db_create () =
+  fun db_create txnid =
     let
       val db = ref Memory.null
       val r  = db_create_ffi (db, NONE, 0)
    in
      if r = 0
-     then !db
+     then (!db, case txnid of SOME p => p | NONE => Memory.null)
      else raise BerkeleyDB r
    end
 
@@ -31,7 +31,7 @@ in
     end
 
 
-  val db_open_ffi = buildCall7 ((getSymbol lib "db_open"), (cPointer, cOptionPtr cPointer, cOptionPtr cString, cOptionPtr cString, cInt, cUint32, cInt), cInt)
+  val db_open_ffi = buildCall7 ((getSymbol lib "db_open"), (cPointer, cPointer, cOptionPtr cString, cOptionPtr cString, cInt, cUint32, cInt), cInt)
   fun db_open (db, txnid, filename, dbname, dbtype, flags, mode) =
     let
       val r = db_open_ffi (db, txnid, filename, dbname, dbtype, flags, mode)
@@ -49,7 +49,7 @@ in
     end
 
 
-  val db_put_ffi = buildCall7 ((getSymbol lib "db_put"), (cPointer, cOptionPtr cPointer, cString, cUint32, cString, cUint32, cUint32), cInt)
+  val db_put_ffi = buildCall7 ((getSymbol lib "db_put"), (cPointer, cPointer, cString, cUint32, cString, cUint32, cUint32), cInt)
   fun db_put (db, txnid, key, data, flags) =
     let
       val r = db_put_ffi (db, txnid, key, String.size key, data, String.size data, flags)
@@ -57,7 +57,7 @@ in
       if r = 0 then () else raise BerkeleyDB r
     end
 
-  val db_put_recno_ffi = buildCall6 ((getSymbol lib "db_put_recno"), (cPointer, cOptionPtr cPointer, cStar cUint32, cString, cUint32, cUint32), cInt)
+  val db_put_recno_ffi = buildCall6 ((getSymbol lib "db_put_recno"), (cPointer, cPointer, cStar cUint32, cString, cUint32, cUint32), cInt)
   fun db_put_recno (db, txnid, key, data, flags) =
     let
       val key' = ref key
@@ -75,7 +75,7 @@ in
 
   fun readMem (mem:Memory.voidStar, len:int) : string = CharVector.tabulate (len, fn i => Byte.byteToChar (Memory.get8 (mem, Word.fromInt i)))
 
-  val db_get_ffi = buildCall7 ((getSymbol lib "db_get"), (cPointer, cOptionPtr cPointer, cString, cUint32, cStar cPointer, cStar cUint32, cUint32), cInt)
+  val db_get_ffi = buildCall7 ((getSymbol lib "db_get"), (cPointer, cPointer, cString, cUint32, cStar cPointer, cStar cUint32, cUint32), cInt)
   fun db_get (db, txnid, key, flags) =
     let
       val data_r = ref Memory.null
@@ -87,7 +87,7 @@ in
       else if isAbsent r then NONE else raise BerkeleyDB r
     end
 
-  val db_get_recno_ffi = buildCall6 ((getSymbol lib "db_get_recno"), (cPointer, cOptionPtr cPointer, cUint32, cStar cPointer, cStar cUint32, cUint32), cInt)
+  val db_get_recno_ffi = buildCall6 ((getSymbol lib "db_get_recno"), (cPointer, cPointer, cUint32, cStar cPointer, cStar cUint32, cUint32), cInt)
   fun db_get_recno (db, txnid, key, flags) =
     let
       val data_r = ref Memory.null
@@ -100,7 +100,7 @@ in
     end
 
 
-  val db_exists_ffi = buildCall5 ((getSymbol lib "db_exists"), (cPointer, cOptionPtr cPointer, cString, cUint32, cUint32), cInt)
+  val db_exists_ffi = buildCall5 ((getSymbol lib "db_exists"), (cPointer, cPointer, cString, cUint32, cUint32), cInt)
   fun db_exists (db, txnid, key, flags) =
     let
       val r = db_exists_ffi (db, txnid, key, String.size key, flags)
@@ -109,7 +109,7 @@ in
       if isAbsent r then false else raise BerkeleyDB r
     end
 
-  val db_exists_recno_ffi = buildCall4 ((getSymbol lib "db_exists_recno"), (cPointer, cOptionPtr cPointer, cUint32, cUint32), cInt)
+  val db_exists_recno_ffi = buildCall4 ((getSymbol lib "db_exists_recno"), (cPointer, cPointer, cUint32, cUint32), cInt)
   fun db_exists_recno (db, txnid, key, flags) =
     let
       val r = db_exists_recno_ffi (db, txnid, key, flags)
@@ -119,7 +119,7 @@ in
     end
 
 
-  val db_del_ffi = buildCall5 ((getSymbol lib "db_del"), (cPointer, cOptionPtr cPointer, cString, cUint32, cUint32), cInt)
+  val db_del_ffi = buildCall5 ((getSymbol lib "db_del"), (cPointer, cPointer, cString, cUint32, cUint32), cInt)
   fun db_del (db, txnid, key, flags) =
     let
       val r = db_del_ffi (db, txnid, key, String.size key, flags)
@@ -128,7 +128,7 @@ in
       if isAbsent r then () else raise BerkeleyDB r
     end
 
-  val db_del_recno_ffi = buildCall4 ((getSymbol lib "db_del_recno"), (cPointer, cOptionPtr cPointer, cUint32, cUint32), cInt)
+  val db_del_recno_ffi = buildCall4 ((getSymbol lib "db_del_recno"), (cPointer, cPointer, cUint32, cUint32), cInt)
   fun db_del_recno (db, txnid, key, flags) =
     let
       val r =  db_del_recno_ffi (db, txnid, key, flags)
@@ -140,22 +140,22 @@ in
 
   structure BTree =
   struct
-    datatype db = BTree of Memory.voidStar
+    datatype db = BTree of Memory.voidStar * Memory.voidStar
   end
 
   structure Hash =
   struct
-    datatype db = Hash of Memory.voidStar
+    datatype db = Hash of Memory.voidStar * Memory.voidStar
   end
 
   structure Recno =
   struct
-    datatype db = Recno of Memory.voidStar
+    datatype db = Recno of Memory.voidStar * Memory.voidStar
   end
 
   structure Queue =
   struct
-    datatype db = Queue of Memory.voidStar
+    datatype db = Queue of Memory.voidStar * Memory.voidStar
   end
 end
 
