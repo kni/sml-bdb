@@ -3,7 +3,7 @@ sig
   exception BerkeleyDB of int
   type dbTxn
   datatype dbFlag = DB_CREATE | DB_RECOVER | DB_APPEND
-    | DB_NEXT | DB_NEXT_DUP
+    | DB_NEXT | DB_NEXT_DUP | DB_DUP
 
   structure BTree :
   sig
@@ -108,13 +108,14 @@ struct
 
 
   datatype dbFlag = DB_CREATE | DB_RECOVER | DB_APPEND
-    | DB_NEXT | DB_NEXT_DUP
+    | DB_NEXT | DB_NEXT_DUP | DB_DUP
 
   fun dbFlagToWord DB_CREATE  = 0w1
     | dbFlagToWord DB_RECOVER = 0w2
     | dbFlagToWord DB_APPEND  = 0w2
     | dbFlagToWord DB_NEXT      = 0w16
     | dbFlagToWord DB_NEXT_DUP  = 0w17
+    | dbFlagToWord DB_DUP       = 0w16
 
   fun dbFlagsAnd flags = Word.toInt (List.foldl (fn (v,a) => Word.orb (dbFlagToWord v, a)) 0w0 flags)
 
