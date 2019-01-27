@@ -188,6 +188,14 @@ in
     end
 
 
+  val db_verify_ffi = buildCall4 ((getSymbol lib "db_verify"), (cPointer, cString, cOptionPtr cString, cUint32), cInt)
+  fun db_verify (db, filename, dbname, flags) =
+    let
+      val r = db_verify_ffi (db, filename, dbname, flags)
+    in
+      if r = 0 then true else if r = ~30968 (* DB_VERIFY_BAD *) then false else raise BerkeleyDB r
+    end
+
 
   structure BTree =
   struct

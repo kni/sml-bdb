@@ -22,6 +22,8 @@ sig
     val dbCursor : db * dbFlag list -> dbc
     val dbcClose : dbc -> unit
     val dbcGet   : dbc * dbFlag list -> (string * string) option
+
+    val dbVerify : db * string * string option * dbFlag list -> bool
   end
 
   structure Hash :
@@ -41,6 +43,8 @@ sig
     val dbCursor : db * dbFlag list -> dbc
     val dbcClose : dbc -> unit
     val dbcGet   : dbc * dbFlag list -> (string * string) option
+
+    val dbVerify : db * string * string option * dbFlag list -> bool
   end
 
   structure Recno :
@@ -61,6 +65,8 @@ sig
     val dbCursor : db * dbFlag list -> dbc
     val dbcClose : dbc -> unit
     val dbcGet   : dbc * dbFlag list -> (int * string) option
+
+    val dbVerify : db * string * string option * dbFlag list -> bool
   end
 
   structure Queue :
@@ -81,6 +87,8 @@ sig
     val dbCursor : db * dbFlag list -> dbc
     val dbcClose : dbc -> unit
     val dbcGet   : dbc * dbFlag list -> (int * string) option
+
+    val dbVerify : db * string * string option * dbFlag list -> bool
   end
 
 end
@@ -130,6 +138,8 @@ struct
     fun dbCursor (BTree (db, dbtxn), flags)    = BTreeCursor (db_cursor (db, dbtxn, dbFlagsAnd flags))
     fun dbcClose (BTreeCursor dbc)             = dbc_close dbc
     fun dbcGet   (BTreeCursor dbc, flags) = dbc_get (dbc, dbFlagsAnd flags)
+
+    fun dbVerify (BTree (db, dbtxn), filename, dbname, flags) = db_verify (db, filename, dbname, dbFlagsAnd flags)
   end
 
 
@@ -151,6 +161,8 @@ struct
     fun dbCursor (Hash (db, dbtxn), flags)    = HashCursor (db_cursor (db, dbtxn, dbFlagsAnd flags))
     fun dbcClose (HashCursor dbc)             = dbc_close dbc
     fun dbcGet   (HashCursor dbc, flags) = dbc_get (dbc, dbFlagsAnd flags)
+
+    fun dbVerify (Hash (db, dbtxn), filename, dbname, flags) = db_verify (db, filename, dbname, dbFlagsAnd flags)
   end
 
 
@@ -174,6 +186,8 @@ struct
     fun dbCursor (Recno (db, dbtxn), flags)    = RecnoCursor (db_cursor (db, dbtxn, dbFlagsAnd flags))
     fun dbcClose (RecnoCursor dbc)             = dbc_close dbc
     fun dbcGet   (RecnoCursor dbc, flags) = dbc_get_recno (dbc, dbFlagsAnd flags)
+
+    fun dbVerify (Recno (db, dbtxn), filename, dbname, flags) = db_verify (db, filename, dbname, dbFlagsAnd flags)
   end
 
 
@@ -197,6 +211,8 @@ struct
     fun dbCursor (Queue (db, dbtxn), flags)    = QueueCursor (db_cursor (db, dbtxn, dbFlagsAnd flags))
     fun dbcClose (QueueCursor dbc)             = dbc_close dbc
     fun dbcGet   (QueueCursor dbc, flags) = dbc_get_recno (dbc, dbFlagsAnd flags)
+
+    fun dbVerify (Queue (db, dbtxn), filename, dbname, flags) = db_verify (db, filename, dbname, dbFlagsAnd flags)
   end
 
 end

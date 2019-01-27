@@ -14,11 +14,13 @@ fun test_hash () =
     val db = dbCreate dbtxn
     val _ = dbOpen (db, filename, dbname, flags, mode)
 
-    val () = dbPut (db, "one", "orange", [])
-    val () = dbPut (db, "two", "red", [])
-    val () = dbPut (db, "tree", "yellow", [])
-    val () = dbPut (db, "nine", "brown", [])
-    val () = dbPut (db, "ten", "black", [])
+    fun put key data = dbPut (db, key, data, [])
+
+    val () = put "one"  "orange"
+    val () = put "two"  "red"
+    val () = put "tree" "yellow"
+    val () = put "nine" "brown"
+    val () = put "ten"  "black"
 
     val key  = "tree"
     val data = "yellow"
@@ -78,6 +80,7 @@ fun test_recno () =
     val _ = dbOpen (db, filename, dbname, flags, mode)
 
     fun put key data = dbPut (db, key, data, [])
+
     val _ = put 1 "orange"
     val _ = put 2 "red"
     val _ = put 3 "yellow"
@@ -119,8 +122,33 @@ fun test_recno () =
   end
 
 
+fun test_verify () =
+  let
+    val _ = print "Verify.\n"
+
+    open Hash
+    val dbtxn    = NONE
+    val filename = SOME "/tmp/foo.db"
+    val dbname   = NONE
+    val flags    = [DB_CREATE]
+    val mode     = 0
+
+    val db = dbCreate dbtxn
+    val () = dbOpen (db, filename, dbname, flags, mode)
+    fun put key data = dbPut (db, key, data, [])
+    val () = put "one"  "orange"
+    val () = put "two"  "red"
+    val () = put "tree" "yellow"
+    val () = dbClose (db, [])
+
+    val db = dbCreate dbtxn
+    val _ = if dbVerify (db, valOf filename, dbname, []) then print "Verify: OK\n" else print "Verify: ERROR\n"
+
+  in () end
+
 fun main () = (
     test_hash ();
     test_recno ();
+    (* test_verify (); *)
     print "The End.\n"
   ) handle exc => print ("function main raised an exception: " ^ exnMessage exc ^ "\n")

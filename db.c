@@ -198,3 +198,10 @@ int dbc_get_recno(DBC *DBcursor, db_recno_t *key, char **data, u_int32_t *data_l
 	}
 	return ret;
 }
+
+
+
+
+int db_verify(DB *db, const char *file, const char *database, u_int32_t flags) {
+	return db->verify(db, file, database, NULL, flags);
+}

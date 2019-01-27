@@ -207,6 +207,17 @@ in
     end
 
 
+  val db_verify_ffi = _import "db_verify": t * string * t * Word32.word -> int;
+  fun db_verify (db, filename, dbname, flags) =
+    let
+      val dbname_p   = stringOptionToPtr dbname
+      (* ToDo https://github.com/MLton/mlton/issues/53 *)
+      val r = db_verify_ffi (db, filename, dbname_p, Word32.fromInt flags)
+    in
+      freeNotNull dbname_p;
+      if r = 0 then true else if r = ~30968 (* DB_VERIFY_BAD *) then false else raise BerkeleyDB r
+    end
+
 
   structure BTree =
   struct
