@@ -10,11 +10,11 @@ in
   datatype dbTxn = DB_TXN of Memory.voidStar
 
 
-  val db_create_ffi = buildCall3 ((getSymbol lib "db_create"), (cStar cPointer, cOptionPtr cPointer, cUint32), cInt)
+  val db_create_ffi = buildCall3 ((getSymbol lib "db_create"), (cStar cPointer, cPointer, cUint32), cInt)
   fun db_create txnid =
     let
       val db = ref Memory.null
-      val r  = db_create_ffi (db, NONE, 0)
+      val r  = db_create_ffi (db, Memory.null, 0)
    in
      if r = 0
      then (!db, case txnid of SOME p => p | NONE => Memory.null)
@@ -138,24 +138,79 @@ in
     end
 
 
+
+  val db_cursor_ffi = buildCall4 ((getSymbol lib "db_cursor"), (cPointer, cPointer, cStar cPointer, cUint32), cInt)
+  fun db_cursor (db, txnid, flags) =
+    let
+      val dbc = ref Memory.null
+      val r  = db_cursor_ffi (db, txnid, dbc, flags)
+   in
+     if r = 0
+     then !dbc
+     else raise BerkeleyDB r
+   end
+
+
+  val dbc_close_ffi = buildCall1 ((getSymbol lib "dbc_close"), cPointer, cInt)
+  fun dbc_close dbc =
+    let
+      val r = dbc_close_ffi dbc
+    in
+      if r = 0 then () else raise BerkeleyDB r
+    end
+
+
+  val dbc_get_ffi = buildCall6 ((getSymbol lib "dbc_get"), (cPointer, cStar cPointer, cStar cUint32, cStar cPointer, cStar cUint32, cUint32), cInt)
+  fun dbc_get (dbc, flags) =
+    let
+      val key_r = ref Memory.null
+      val key_len_r = ref 0
+      val data_r = ref Memory.null
+      val data_len_r = ref 0
+      val r  = dbc_get_ffi (dbc, key_r, key_len_r, data_r, data_len_r, flags)
+    in
+      if r = 0
+      then SOME (readMem (!key_r, !key_len_r), readMem (!data_r, !data_len_r))
+      else if isAbsent r then NONE else raise BerkeleyDB r
+    end
+
+  val dbc_get_recno_ffi = buildCall5 ((getSymbol lib "dbc_get_recno"), (cPointer, cStar cUint32, cStar cPointer, cStar cUint32, cUint32), cInt)
+  fun dbc_get_recno (dbc, flags) =
+    let
+      val key_r = ref 0
+      val data_r = ref Memory.null
+      val data_len_r = ref 0
+      val r  = dbc_get_recno_ffi (dbc, key_r, data_r, data_len_r, flags)
+    in
+      if r = 0
+      then SOME (!key_r, readMem (!data_r, !data_len_r))
+      else if isAbsent r then NONE else raise BerkeleyDB r
+    end
+
+
+
   structure BTree =
   struct
     datatype db = BTree of Memory.voidStar * Memory.voidStar
+    datatype dbc = BTreeCursor of Memory.voidStar
   end
 
   structure Hash =
   struct
     datatype db = Hash of Memory.voidStar * Memory.voidStar
+    datatype dbc = HashCursor of Memory.voidStar
   end
 
   structure Recno =
   struct
     datatype db = Recno of Memory.voidStar * Memory.voidStar
+    datatype dbc = RecnoCursor of Memory.voidStar
   end
 
   structure Queue =
   struct
     datatype db = Queue of Memory.voidStar * Memory.voidStar
+    datatype dbc = QueueCursor of Memory.voidStar
   end
 end
 

@@ -3,10 +3,12 @@ sig
   exception BerkeleyDB of int
   type dbTxn
   datatype dbFlag = DB_CREATE | DB_RECOVER | DB_APPEND
+    | DB_NEXT | DB_NEXT_DUP
 
   structure BTree :
   sig
     type db
+    type dbc
     val dbCreate : dbTxn option -> db
 
     val dbOpen   : db * string option * string option * dbFlag list * int -> unit
@@ -16,11 +18,16 @@ sig
     val dbGet    : db * string * dbFlag list -> string option
     val dbExists : db * string * dbFlag list -> bool
     val dbDel    : db * string * dbFlag list -> unit
+
+    val dbCursor : db * dbFlag list -> dbc
+    val dbcClose : dbc -> unit
+    val dbcGet   : dbc * dbFlag list -> (string * string) option
   end
 
   structure Hash :
   sig
     type db
+    type dbc
     val dbCreate : dbTxn option -> db
 
     val dbOpen   : db * string option * string option * dbFlag list * int -> unit
@@ -30,11 +37,16 @@ sig
     val dbGet    : db * string * dbFlag list -> string option
     val dbExists : db * string * dbFlag list -> bool
     val dbDel    : db * string * dbFlag list -> unit
+
+    val dbCursor : db * dbFlag list -> dbc
+    val dbcClose : dbc -> unit
+    val dbcGet   : dbc * dbFlag list -> (string * string) option
   end
 
   structure Recno :
   sig
     type db
+    type dbc
     val dbCreate : dbTxn option -> db
     val dbSetReLen : db * int -> unit
 
@@ -45,11 +57,16 @@ sig
     val dbGet    : db * int * dbFlag list -> string option
     val dbExists : db * int * dbFlag list -> bool
     val dbDel    : db * int * dbFlag list -> unit
+
+    val dbCursor : db * dbFlag list -> dbc
+    val dbcClose : dbc -> unit
+    val dbcGet   : dbc * dbFlag list -> (int * string) option
   end
 
   structure Queue :
   sig
     type db
+    type dbc
     val dbCreate : dbTxn option -> db
     val dbSetReLen : db * int -> unit
 
@@ -60,6 +77,10 @@ sig
     val dbGet    : db * int * dbFlag list -> string option
     val dbExists : db * int * dbFlag list -> bool
     val dbDel    : db * int * dbFlag list -> unit
+
+    val dbCursor : db * dbFlag list -> dbc
+    val dbcClose : dbc -> unit
+    val dbcGet   : dbc * dbFlag list -> (int * string) option
   end
 
 end
@@ -79,10 +100,13 @@ struct
 
 
   datatype dbFlag = DB_CREATE | DB_RECOVER | DB_APPEND
+    | DB_NEXT | DB_NEXT_DUP
 
-  fun dbFlagToWord DB_CREATE  = 0wx1
-    | dbFlagToWord DB_RECOVER = 0wx2
-    | dbFlagToWord DB_APPEND  = 0wx2
+  fun dbFlagToWord DB_CREATE  = 0w1
+    | dbFlagToWord DB_RECOVER = 0w2
+    | dbFlagToWord DB_APPEND  = 0w2
+    | dbFlagToWord DB_NEXT      = 0w16
+    | dbFlagToWord DB_NEXT_DUP  = 0w17
 
   fun dbFlagsAnd flags = Word.toInt (List.foldl (fn (v,a) => Word.orb (dbFlagToWord v, a)) 0w0 flags)
 
@@ -102,6 +126,10 @@ struct
     fun dbGet    (BTree (db, dbtxn), key, flags)       = db_get    (db, dbtxn, key, dbFlagsAnd flags)
     fun dbExists (BTree (db, dbtxn), key, flags)       = db_exists (db, dbtxn, key, dbFlagsAnd flags)
     fun dbDel    (BTree (db, dbtxn), key, flags)       = db_del    (db, dbtxn, key, dbFlagsAnd flags)
+
+    fun dbCursor (BTree (db, dbtxn), flags)    = BTreeCursor (db_cursor (db, dbtxn, dbFlagsAnd flags))
+    fun dbcClose (BTreeCursor dbc)             = dbc_close dbc
+    fun dbcGet   (BTreeCursor dbc, flags) = dbc_get (dbc, dbFlagsAnd flags)
   end
 
 
@@ -119,6 +147,10 @@ struct
     fun dbGet    (Hash (db, dbtxn), key, flags)       = db_get    (db, dbtxn, key, dbFlagsAnd flags)
     fun dbExists (Hash (db, dbtxn), key, flags)       = db_exists (db, dbtxn, key, dbFlagsAnd flags)
     fun dbDel    (Hash (db, dbtxn), key, flags)       = db_del    (db, dbtxn, key, dbFlagsAnd flags)
+
+    fun dbCursor (Hash (db, dbtxn), flags)    = HashCursor (db_cursor (db, dbtxn, dbFlagsAnd flags))
+    fun dbcClose (HashCursor dbc)             = dbc_close dbc
+    fun dbcGet   (HashCursor dbc, flags) = dbc_get (dbc, dbFlagsAnd flags)
   end
 
 
@@ -138,6 +170,10 @@ struct
     fun dbGet    (Recno (db, dbtxn), key, flags)       = db_get_recno    (db, dbtxn, key, dbFlagsAnd flags)
     fun dbExists (Recno (db, dbtxn), key, flags)       = db_exists_recno (db, dbtxn, key, dbFlagsAnd flags)
     fun dbDel    (Recno (db, dbtxn), key, flags)       = db_del_recno    (db, dbtxn, key, dbFlagsAnd flags)
+
+    fun dbCursor (Recno (db, dbtxn), flags)    = RecnoCursor (db_cursor (db, dbtxn, dbFlagsAnd flags))
+    fun dbcClose (RecnoCursor dbc)             = dbc_close dbc
+    fun dbcGet   (RecnoCursor dbc, flags) = dbc_get_recno (dbc, dbFlagsAnd flags)
   end
 
 
@@ -157,6 +193,10 @@ struct
     fun dbGet    (Queue (db, dbtxn), key, flags)       = db_get_recno    (db, dbtxn, key, dbFlagsAnd flags)
     fun dbExists (Queue (db, dbtxn), key, flags)       = db_exists_recno (db, dbtxn, key, dbFlagsAnd flags)
     fun dbDel    (Queue (db, dbtxn), key, flags)       = db_del_recno    (db, dbtxn, key, dbFlagsAnd flags)
+
+    fun dbCursor (Queue (db, dbtxn), flags)    = QueueCursor (db_cursor (db, dbtxn, dbFlagsAnd flags))
+    fun dbcClose (QueueCursor dbc)             = dbc_close dbc
+    fun dbcGet   (QueueCursor dbc, flags) = dbc_get_recno (dbc, dbFlagsAnd flags)
   end
 
 end

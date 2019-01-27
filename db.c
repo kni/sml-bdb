@@ -143,3 +143,58 @@ int db_del_recno(DB *db, DB_TXN *txnid, db_recno_t key, u_int32_t flags) {
 
 	return db->del(db, txnid, &dbt_key, flags);
 }
+
+
+
+int db_cursor(DB *db, DB_TXN *txnid, DBC **cursorp, u_int32_t flags) {
+	return db->cursor(db, txnid, cursorp, flags);
+}
+
+
+int dbc_close(DBC *DBcursor) {
+	return DBcursor->close(DBcursor);
+}
+
+
+int dbc_get(DBC *DBcursor, char **key, u_int32_t *key_len, char **data, u_int32_t *data_len, u_int32_t flags) {
+	DBT dbt_key, dbt_data;
+
+	memset(&dbt_key, 0, sizeof(dbt_key));
+	memset(&dbt_data, 0, sizeof(dbt_data));
+
+	int ret = DBcursor->get(DBcursor, &dbt_key, &dbt_data, flags);
+
+	if (ret == 0) {
+		*key = (char *) dbt_key.data;
+		*key_len = dbt_key.size;
+		*data = (char *) dbt_data.data;
+		*data_len = dbt_data.size;
+	} else {
+		*key = NULL;
+		*key_len = 0;
+		*data = NULL;
+		*data_len = 0;
+	}
+	return ret;
+}
+
+
+int dbc_get_recno(DBC *DBcursor, db_recno_t *key, char **data, u_int32_t *data_len, u_int32_t flags) {
+	DBT dbt_key, dbt_data;
+
+	memset(&dbt_key, 0, sizeof(dbt_key));
+	memset(&dbt_data, 0, sizeof(dbt_data));
+
+	int ret = DBcursor->get(DBcursor, &dbt_key, &dbt_data, flags);
+
+	if (ret == 0) {
+	    *key = *(u_long *) dbt_key.data;
+		*data = (char *) dbt_data.data;
+		*data_len = dbt_data.size;
+	} else {
+	    *key = 0;
+		*data = NULL;
+		*data_len = 0;
+	}
+	return ret;
+}

@@ -14,8 +14,14 @@ fun test_hash () =
     val db = dbCreate dbtxn
     val _ = dbOpen (db, filename, dbname, flags, mode)
 
-    val key  = "my_key"
-    val data = "my_data"
+    val () = dbPut (db, "one", "orange", [])
+    val () = dbPut (db, "two", "red", [])
+    val () = dbPut (db, "tree", "yellow", [])
+    val () = dbPut (db, "nine", "brown", [])
+    val () = dbPut (db, "ten", "black", [])
+
+    val key  = "tree"
+    val data = "yellow"
 
     val () = dbPut (db, key, data, [])
     val r = case dbGet (db, key, []) of
@@ -39,7 +45,18 @@ fun test_hash () =
     val _ = if dbExists (db, key, [])
             then print ("Del and Exists: ERROR\n")
             else print ("Del and Exists: OK\n")
+
+    val _ = print "Cursor\n"
+    val dbc = dbCursor (db, [])
+
+    fun cursorLoop () =
+      case dbcGet (dbc, [DB_NEXT]) of
+          NONE => ()
+        | SOME (key, data) => (print ("\t" ^ key ^ ": " ^ data ^ "\n"); cursorLoop ())
+
+    val _ = cursorLoop ()
   in
+    dbcClose dbc;
     dbClose (db, [])
   end
 
@@ -86,7 +103,18 @@ fun test_recno () =
     val _ = if dbExists (db, key, [])
             then print ("Del and Exists: ERROR\n")
             else print ("Del and Exists: OK\n")
+
+    val _ = print "Cursor\n"
+    val dbc = dbCursor (db, [])
+
+    fun cursorLoop () =
+      case dbcGet (dbc, [DB_NEXT]) of
+          NONE => ()
+        | SOME (key, data) => (print ("\t" ^ Int.toString key ^ ": " ^ data ^ "\n"); cursorLoop ())
+
+    val _ = cursorLoop ()
   in
+    dbcClose dbc;
     dbClose (db, [])
   end
 

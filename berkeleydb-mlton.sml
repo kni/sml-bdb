@@ -157,24 +157,79 @@ in
     end
 
 
+
+  val db_cursor_ffi = _import "db_cursor": t * t * t ref * Word32.word -> int;
+  fun db_cursor (db, txnid, flags) =
+    let
+      val dbc = ref null
+      val r  = db_cursor_ffi (db, txnid, dbc, Word32.fromInt flags)
+   in
+     if r = 0
+     then !dbc
+     else raise BerkeleyDB r
+   end
+
+
+  val dbc_close_ffi = _import "dbc_close": t -> int;
+  fun dbc_close dbc =
+    let
+      val r = dbc_close_ffi dbc
+    in
+      if r = 0 then () else raise BerkeleyDB r
+    end
+
+
+  val dbc_get_ffi = _import "dbc_get": t * t ref * Word32.word ref * t ref * Word32.word ref * Word32.word-> int;
+  fun dbc_get (dbc, flags) =
+    let
+      val key_r = ref null
+      val key_len_r = ref 0w0
+      val data_r = ref null
+      val data_len_r = ref 0w0
+      val r  = dbc_get_ffi (dbc, key_r, key_len_r, data_r, data_len_r, Word32.fromInt flags)
+    in
+      if r = 0
+      then SOME (readMem (!key_r, !key_len_r), readMem (!data_r, !data_len_r))
+      else if isAbsent r then NONE else raise BerkeleyDB r
+    end
+
+  val dbc_get_recno_ffi = _import "dbc_get_recno": t * Word32.word ref * t ref * Word32.word ref * Word32.word-> int;
+  fun dbc_get_recno (dbc, flags) =
+    let
+      val key_r = ref 0w0
+      val data_r = ref null
+      val data_len_r = ref 0w0
+      val r  = dbc_get_recno_ffi (dbc, key_r, data_r, data_len_r, Word32.fromInt flags)
+    in
+      if r = 0
+      then SOME (Word32.toInt (!key_r), readMem (!data_r, !data_len_r))
+      else if isAbsent r then NONE else raise BerkeleyDB r
+    end
+
+
+
   structure BTree =
   struct
     datatype db = BTree of t * t
+    datatype dbc = BTreeCursor of t
   end
 
   structure Hash =
   struct
     datatype db = Hash of t * t
+    datatype dbc = HashCursor of t
   end
 
   structure Recno =
   struct
     datatype db = Recno of t * t
+    datatype dbc = RecnoCursor of t
   end
 
   structure Queue =
   struct
     datatype db = Queue of t * t
+    datatype dbc = QueueCursor of t
   end
 end
 
