@@ -38,6 +38,7 @@ in
   fun stringOptionToPtr NONE = null
     | stringOptionToPtr (SOME s) =
     let
+      val s = s ^ "\000"
       val p = malloc (String.size s)
     in
       CharVector.appi (fn (i, c) => setWord8 (p, i, Word8.fromInt(Char.ord c))) s;
