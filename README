@@ -7,3 +7,6 @@ N.B. for PolyML
 Get function is not threads safe.
 DB_DBT_MALLOC is not used to get DBT (see Berkeley DB documentation).
 To protect Get function use mutex when you have access for a database from many threads.
+
+Tip.
+Do not dbVerify and dbOpen with same db handler.

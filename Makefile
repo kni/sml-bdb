@@ -1,8 +1,10 @@
 all:
 	@echo "target: poly mlton clean"
 
-poly:
+db.so: db.c
 	cc -shared -I/usr/local/include/db5 -L/usr/local/lib -ldb-5 -o db.so db.c
+
+poly: db.so
 	polyc -o t-poly t.mlp
 	env LD_LIBRARY_PATH=. ./t-poly
 

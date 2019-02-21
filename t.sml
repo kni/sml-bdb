@@ -126,9 +126,12 @@ fun test_verify () =
   let
     val _ = print "Verify.\n"
 
+    val file = "/tmp/too.db"
+    val _ = OS.FileSys.remove file
+
     open Hash
     val dbtxn    = NONE
-    val filename = SOME "/tmp/foo.db"
+    val filename = SOME file
     val dbname   = NONE
     val flags    = [DB_CREATE]
     val mode     = 0
@@ -141,8 +144,7 @@ fun test_verify () =
     val () = put "tree" "yellow"
     val () = dbClose (db, [])
 
-    val db = dbCreate dbtxn
-    val _ = if dbVerify (db, valOf filename, dbname, []) then print "Verify: OK\n" else print "Verify: ERROR\n"
+    val _ = if dbVerify (dbCreate dbtxn, file, dbname, []) then print "Verify: OK\n" else print "Verify: ERROR\n"
 
   in () end
 
